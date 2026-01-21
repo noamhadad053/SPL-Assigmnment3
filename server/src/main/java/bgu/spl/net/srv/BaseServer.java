@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.function.Supplier;
+import bgu.spl.net.api.StompMessagingProtocol;
+
 
 public abstract class BaseServer<T> implements Server<T> {
 
@@ -13,6 +15,9 @@ public abstract class BaseServer<T> implements Server<T> {
     private final Supplier<MessagingProtocol<T>> protocolFactory;
     private final Supplier<MessageEncoderDecoder<T>> encdecFactory;
     private ServerSocket sock;
+
+    private int connectionIdCounter = 0;
+    private final Connections<T> connections;
 
     public BaseServer(
             int port,
@@ -23,6 +28,8 @@ public abstract class BaseServer<T> implements Server<T> {
         this.protocolFactory = protocolFactory;
         this.encdecFactory = encdecFactory;
 		this.sock = null;
+        //init
+        this.connections = new ConnectionsImpl<>();
     }
 
     @Override
@@ -36,13 +43,25 @@ public abstract class BaseServer<T> implements Server<T> {
             while (!Thread.currentThread().isInterrupted()) {
 
                 Socket clientSock = serverSock.accept();
+                
+                MessagingProtocol<T> protocol = protocolFactory.get();
+                
+                if (protocol instanceof StompMessagingProtocol) {
+                    
+                    ((StompMessagingProtocol<T>) protocol).start(connectionIdCounter, connections);
+                }else{
+                    
+                }
 
                 BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<>(
                         clientSock,
                         encdecFactory.get(),
-                        protocolFactory.get());
+                        protocol);
 
+                connections.connect(connectionIdCounter, handler);
                 execute(handler);
+
+                connectionIdCounter++;
             }
         } catch (IOException ex) {
         }

@@ -11,7 +11,11 @@ public interface Connections<T> {
     void disconnect(int connectionId);
 
     //expanded interface:
+    void connect(int connectionId, ConnectionHandler<T> handler);
+    
     void subscribe(String channel, int connectionId, int subscriptionId);
     
     void unsubscribe(String channel, int connectionId, int subscriptionId);
+
+    void sendMessage(String channel, String body, String messageId);
 }

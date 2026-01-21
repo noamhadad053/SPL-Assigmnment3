@@ -1,6 +1,6 @@
 package bgu.spl.net.srv;
 
-
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -9,6 +9,12 @@ public class ConnectionsImpl<T> implements Connections<T>{
     //concurrent HashMap and concurrent LinkedQueue like in PS8
     private final ConcurrentHashMap<Integer, ConnectionHandler<T>> activeConnections = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ConcurrentHashMap<Integer, Integer>> channelSubscribers = new ConcurrentHashMap<>();
+
+    @Override
+    public void connect(int connectionId, ConnectionHandler<T> handler) {
+        activeConnections.put(connectionId, handler);
+    }
+
     @Override
     public boolean send(int connectionId, T msg){
         //lookup clients handler
@@ -17,21 +23,25 @@ public class ConnectionsImpl<T> implements Connections<T>{
 
         //client connected
         if (handler != null) {
+            
             handler.send(msg);
             return true;
+        }else{
+            
+            return false;
         }
-        return false;
+
 
     }
 
     @Override
     public void send(String channel, T msg){
         //find subscribers
-        ConcurrentLinkedQueue<Integer> subscribers = channelSubscribers.get(channel);
+        ConcurrentHashMap<Integer, Integer> subscribers = channelSubscribers.get(channel);
 
         if (subscribers != null) {
-            for (Integer userId : subscribers) {
-                send(userId,msg);
+            for (Integer userId : subscribers.keySet()) {
+                send(userId, msg);
             }
         }
 
@@ -62,7 +72,7 @@ public class ConnectionsImpl<T> implements Connections<T>{
             channelSubscribers.get(channel).remove(connectionId);
         }
     }
-
+ 
 
     //we need to send client 0 the id header 0 and client 1 the id header 1
     //helper function to do that
@@ -70,7 +80,7 @@ public class ConnectionsImpl<T> implements Connections<T>{
         if (channelSubscribers.containsKey(channel)) {
             ConcurrentHashMap<Integer, Integer> subscribers = channelSubscribers.get(channel);
             
-            for (var entry : subscribers.entrySet()) {
+            for (Map.Entry<Integer, Integer> entry : subscribers.entrySet()) {
                 Integer connId = entry.getKey();
                 Integer subId = entry.getValue(); // <--- This is the magic number you need!
                 

@@ -14,6 +14,8 @@ struct GameState {
     std::map<std::string, std::string> team_a_stats;
     std::map<std::string, std::string> team_b_stats;
     std::vector<Event> events; // stores the raw events
+
+    GameState() : team_a(""), team_b(""), general_stats(), team_a_stats(), team_b_stats(), events() {}
 };
 class StompProtocol
 {

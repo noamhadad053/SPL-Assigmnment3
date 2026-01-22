@@ -34,18 +34,18 @@ def init_database():
         # make the connection safer by enforcing foreign key constraints
         db_connection.execute("PRAGMA foreign_keys = ON;")
 
-        # creating users table
+        # creating users 
         db_connection.execute("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
             password TEXT NOT NULL,
-            created_at TEXT NOT NULL
+            registration_date TEXT NOT NULL
         );
         """)
 
         # creating logins table
         db_connection.execute("""
-        CREATE TABLE IF NOT EXISTS logins (
+        CREATE TABLE IF NOT EXISTS login_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
             login_time TEXT NOT NULL,
@@ -56,12 +56,12 @@ def init_database():
 
         # creating report files table
         db_connection.execute("""
-        CREATE TABLE IF NOT EXISTS report_files (
+        CREATE TABLE IF NOT EXISTS file_tracking (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
             filename TEXT NOT NULL,
-            channel TEXT,
-            report_time TEXT NOT NULL,
+            upload_time TEXT NOT NULL,
+            game_channel TEXT,
             FOREIGN KEY (username) REFERENCES users(username)
         );
         """)
@@ -71,11 +71,12 @@ def init_database():
 
 
 def execute_sql_command(sql_command: str) -> str:
-    if sql_command in ("", None):
-        return "error:empty sql command"
+    if sql_command == None:
+        sql_command = ""
     
     sql_command = sql_command.strip()
-
+    if sql_command == "":
+        return "error:empty sql command"
     try:
         with sqlite3.connect(DB_FILE) as connection:
             # make the connection safer by enforcing foreign key constraints
@@ -88,7 +89,30 @@ def execute_sql_command(sql_command: str) -> str:
 
 
 def execute_sql_query(sql_query: str) -> str:
-    return "done"
+    # handle edge case
+    if sql_query == None:
+        sql_query = ""
+
+    sql_query = sql_query.strip()
+    if sql_query == "":
+        return "error:empty sql query"
+    
+    try:
+        with sqlite3.connect(DB_FILE) as connection:
+            # make the connection safer by enforcing foreign key constraints
+            connection.execute("PRAGMA foreign_keys = ON;")
+            cursor = connection.cursor()
+            cursor.execute(sql_query)
+            rows = cursor.fetchall()
+        
+        # if no data returned
+        if not rows:
+            return "SUCCESS"
+
+        return "SUCCESS|" + "|".join(repr(tuple(row)) for row in rows)
+
+    except Exception as e:
+        return f"error:{e}"
 
 
 def handle_client(client_socket: socket.socket, addr):

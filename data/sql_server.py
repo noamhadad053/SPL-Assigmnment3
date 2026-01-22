@@ -87,8 +87,37 @@ def execute_sql_command(sql_command: str) -> str:
         return f"error:{e}"
 
 
+
+
 def execute_sql_query(sql_query: str) -> str:
-    return "done"
+    """
+    Executes a SELECT statement and returns the rows as a string.
+    """
+    if sql_query in ("", None):
+        return "error:empty sql query"
+    
+    try:
+        with sqlite3.connect(DB_FILE) as connection:
+            cursor = connection.cursor()
+            cursor.execute(sql_query)
+            
+            # SELECT
+            rows = cursor.fetchall()
+            
+            if not rows:
+                return "" # returns empty
+            
+            
+            results = []
+            for row in rows:
+                # convert everything to string and seprate with commas
+                row_str = ", ".join(str(item) for item in row)
+                results.append(row_str)
+            
+            return "\n".join(results)
+            
+    except Exception as e:
+        return f"error:{e}"
 
 
 def handle_client(client_socket: socket.socket, addr):
@@ -100,10 +129,19 @@ def handle_client(client_socket: socket.socket, addr):
             if message == "":
                 break
 
+            
             print(f"[{SERVER_NAME}] Received:")
+
+            response = ""
+            command_upper = message.strip().upper()
+            
+            if command_upper.startswith("SELECT"):
+                response = execute_sql_query(message)
+            else:
+                response = execute_sql_command(message)
             print(message)
 
-            client_socket.sendall(b"done\0")
+            client_socket.sendall(response.encode('utf-8') + b"\0")
 
     except Exception as e:
         print(f"[{SERVER_NAME}] Error handling client {addr}: {e}")
@@ -143,7 +181,9 @@ def start_server(host="127.0.0.1", port=7778):
             pass
 
 
+
 if __name__ == "__main__":
+    init_database()
     port = 7778
     if len(sys.argv) > 1:
         raw_port = sys.argv[1].strip()

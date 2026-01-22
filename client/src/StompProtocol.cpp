@@ -49,40 +49,36 @@ void StompProtocol::process(string message) {
         handler->close();
     }
     else if (command == "RECEIPT") {
-        // Extract receipt-id header
+        //get receipt
         string line;
         int receiptId = -1;
         while(getline(ss, line)) {
             if (line.find("receipt-id:") == 0) {
-                // Parse "receipt-id:123" -> 123
                 try {
                     receiptId = stoi(line.substr(11));
                 } catch (...) {}
             }
         }
 
-        // Check our local map to see what command this receipt confirms
+        // check local map
         if (receiptId != -1 && receiptForCommand.count(receiptId)) {
             string cmd = receiptForCommand[receiptId];
             
             if (cmd == "disconnect") {
-                cout << "Disconnected successfully" << endl; // Required output?
+                cout << "Disconnected successfully" << endl; 
                 shouldTerminate = true;
                 isLoggedIn = false;
                 handler->close();
             } 
             else if (cmd.find("join") == 0) {
-                // cmd is "join germany_spain"
                 cout << "Joined channel " << cmd.substr(5) << endl;
             } 
             else if (cmd.find("exit") == 0) {
-                // cmd is "exit germany_spain"
                  cout << "Exited channel " << cmd.substr(5) << endl;
             }
         }
     }
     else if (command == "MESSAGE") {
-        // For now, simply print the message body as per requirements
         string line;
         bool inBody = false;
         cout << "Displaying new message:" << endl;
@@ -90,8 +86,6 @@ void StompProtocol::process(string message) {
              if (line.empty() || line == "\r") { inBody = true; continue; }
              if (inBody) cout << line << endl;
         }
-        // TODO: In the future, you may need to parse this body to update gameStorage
-        // just like you do in 'report'.
     }
 }
 

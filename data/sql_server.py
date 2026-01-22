@@ -11,7 +11,7 @@ the methods below.
 import socket
 import sys
 import threading
-
+import sqlite3
 
 SERVER_NAME = "STOMP_PYTHON_SQL_SERVER"  # DO NOT CHANGE!
 DB_FILE = "stomp_server.db"              # DO NOT CHANGE!
@@ -30,11 +30,61 @@ def recv_null_terminated(sock: socket.socket) -> str:
 
 
 def init_database():
-    pass
+    with sqlite3.connect(DB_FILE) as db_connection:
+        # make the connection safer by enforcing foreign key constraints
+        db_connection.execute("PRAGMA foreign_keys = ON;")
+
+        # creating users table
+        db_connection.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        """)
+
+        # creating logins table
+        db_connection.execute("""
+        CREATE TABLE IF NOT EXISTS logins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            login_time TEXT NOT NULL,
+            logout_time TEXT,
+            FOREIGN KEY (username) REFERENCES users(username)
+        );
+        """)
+
+        # creating report files table
+        db_connection.execute("""
+        CREATE TABLE IF NOT EXISTS report_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            channel TEXT,
+            report_time TEXT NOT NULL,
+            FOREIGN KEY (username) REFERENCES users(username)
+        );
+        """)
+
+        #saving changes
+        db_connection.commit()
 
 
 def execute_sql_command(sql_command: str) -> str:
-    return "done"
+    if sql_command in ("", None):
+        return "error:empty sql command"
+    
+    sql_command = sql_command.strip()
+
+    try:
+        with sqlite3.connect(DB_FILE) as connection:
+            # make the connection safer by enforcing foreign key constraints
+            connection.execute("PRAGMA foreign_keys = ON;")
+            connection.execute(sql_command)
+            connection.commit()
+        return "done"
+    except Exception as e:
+        return f"error:{e}"
 
 
 def execute_sql_query(sql_query: str) -> str:
